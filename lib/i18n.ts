@@ -1,6 +1,78 @@
 export type Lang = "es" | "en";
 
-const translations = {
+export type Translations = {
+  nav: {
+    all: string;
+    about: string;
+    contact: string;
+  };
+  gallery: {
+    frames: string;
+    admin: string;
+    upload: string;
+    uploading: string;
+    newPhoto: string;
+    cameraType: string;
+    uploadingAs: string;
+    title: string;
+    description: string;
+    optional: string;
+    date: string;
+    camera: string;
+    filmRoll: string;
+    iso: string;
+    filmType: string;
+    color: string;
+    bw: string;
+    selectPhotos: string;
+    cancel: string;
+    adminKey: string;
+    enter: string;
+    editPhoto: string;
+    category: string;
+    save: string;
+    blankRoll: string;
+    noPhotos: string;
+    close: string;
+    deleteConfirm: string;
+  };
+  categories: {
+    todos: string;
+    viaje: string;
+    retrato: string;
+    urbano: string;
+    naturaleza: string;
+    otro: string;
+  };
+  about: {
+    section: string;
+    bio: string;
+    equipment: string;
+    categories: string;
+    social: string;
+    bioText: string;
+    equipmentText: string;
+    photoHere: string;
+    tags: string[];
+  };
+  contact: {
+    section: string;
+    heading: string;
+    name: string;
+    namePlaceholder: string;
+    message: string;
+    messagePlaceholder: string;
+    sending: string;
+    send: string;
+    error: string;
+    sent: string;
+    soon: string;
+    another: string;
+    alsoOn: string;
+  };
+};
+
+const translations: Record<Lang, Translations> = {
   es: {
     nav: {
       all: "Todas",
@@ -61,6 +133,7 @@ const translations = {
       heading: "Escríbeme",
       name: "Nombre",
       namePlaceholder: "Tu nombre",
+      message: "Mensaje",
       messagePlaceholder: "¿En qué te puedo ayudar?",
       sending: "Enviando...",
       send: "Enviar mensaje →",
@@ -69,7 +142,6 @@ const translations = {
       soon: "Te respondo pronto.",
       another: "Enviar otro mensaje",
       alsoOn: "También en",
-      message: "Mensaje",
     },
   },
   en: {
@@ -132,6 +204,7 @@ const translations = {
       heading: "Write to me",
       name: "Name",
       namePlaceholder: "Your name",
+      message: "Message",
       messagePlaceholder: "How can I help you?",
       sending: "Sending...",
       send: "Send message →",
@@ -140,10 +213,8 @@ const translations = {
       soon: "I'll get back to you soon.",
       another: "Send another message",
       alsoOn: "Also on",
-      message: "Message",
     },
   },
-} as const;
+};
 
-export type Translations = typeof translations.es;
 export default translations;
