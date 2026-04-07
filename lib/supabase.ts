@@ -23,11 +23,13 @@ export function getSupabaseAdmin() {
 
 export type Photo = {
   id: string;
-  title: string;
+  title: string | null;
+  description: string | null;
   category: string;
   storage_path: string;
   public_url: string;
   created_at: string;
+  shot_at: string | null;
   frame_num: string;
   medium: "35mm" | "digital";
   camera: string | null;
