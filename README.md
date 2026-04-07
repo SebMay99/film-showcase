@@ -1,4 +1,4 @@
-# Seb — Portfolio Fotográfico
+# Seb — Photography Portfolio
 
 <p align="center">
   <img src="https://img.shields.io/badge/Next.js-16.2-black?style=flat-square&logo=next.js&logoColor=white" />
@@ -10,53 +10,53 @@
 </p>
 
 <p align="center">
-  Portfolio personal de fotografía analógica y digital.<br/>
-  Estética de película 35mm — grano, sepia, marcos blancos y tipografía editorial.
+  Personal photography portfolio with an analog 35mm film aesthetic.<br/>
+  Grain overlays, white borders, editorial typography, film metadata — and a digital gallery too.
 </p>
 
 ---
 
 ## Stack
 
-| Tecnología | Uso |
+| Technology | Purpose |
 |---|---|
-| **Next.js 16** (App Router) | Framework principal |
-| **Tailwind CSS v4** | Estilos con paleta analógica personalizada |
-| **Supabase Storage** | Almacenamiento de imágenes |
-| **Supabase PostgreSQL** | Base de datos + RLS |
-| **Framer Motion** | Animaciones |
-| **Lucide React** | Iconos |
-| **Vercel** | Deploy y hosting |
+| **Next.js 16** (App Router) | Framework |
+| **Tailwind CSS v4** | Styling with custom analog color palette |
+| **Supabase Storage** | Image storage |
+| **Supabase PostgreSQL** | Database + Row Level Security |
+| **Framer Motion** | Animations |
+| **Lucide React** | Icons |
+| **Vercel** | Hosting & deployment |
 
 ---
 
-## Páginas
+## Pages
 
-| Ruta | Descripción |
+| Route | Description |
 |---|---|
-| `/` | Galería completa — todas las fotos |
-| `/35mm` | Portfolio de fotografía analógica |
-| `/digital` | Portfolio de fotografía digital |
-| `/about` | Bio y equipamiento |
-| `/contact` | Formulario de contacto |
+| `/` | Full gallery — all photos |
+| `/35mm` | Film photography portfolio |
+| `/digital` | Digital photography portfolio |
+| `/about` | Bio and gear |
+| `/contact` | Contact form |
 
 ---
 
 ## Setup
 
-### 1. Instalar dependencias
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Configurar Supabase
+### 2. Configure Supabase
 
-1. Crea un proyecto en [supabase.com](https://supabase.com)
-2. Ve a **SQL Editor** y ejecuta `supabase-setup.sql` completo
-3. Ve a **Storage** → crea un bucket llamado `portfolio` → márcalo como **Public**
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to **SQL Editor** and run the full contents of `supabase-setup.sql`
+3. Go to **Storage** → create a bucket named `portfolio` → mark it as **Public**
 
-### 3. Variables de entorno
+### 3. Environment variables
 
 ```bash
 cp .env.example .env.local
@@ -65,11 +65,11 @@ cp .env.example .env.local
 ```env
 NEXT_PUBLIC_SUPABASE_URL=         # Settings → API → Project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=    # Settings → API → anon public key
-SUPABASE_SERVICE_ROLE_KEY=        # Settings → API → service_role key (secreto)
-NEXT_PUBLIC_ADMIN_KEY=            # Tu contraseña de admin
+SUPABASE_SERVICE_ROLE_KEY=        # Settings → API → service_role key (secret)
+NEXT_PUBLIC_ADMIN_KEY=            # Your admin password (choose any string)
 ```
 
-### 4. Desarrollo local
+### 4. Run locally
 
 ```bash
 npm run dev
@@ -81,52 +81,64 @@ npm run dev
 npx vercel
 ```
 
-O conecta el repositorio en [vercel.com](https://vercel.com) y agrega las 4 variables en **Settings → Environment Variables**.
+Or connect the repository at [vercel.com](https://vercel.com) and add all 4 environment variables under **Settings → Environment Variables**.
 
 ---
 
-## Modo administrador
+## Admin mode
 
-El acceso admin está oculto — sin rutas expuestas ni botones visibles.
+Admin access is hidden — no exposed routes, no visible buttons.
 
-1. En cualquier galería, **haz clic 5 veces** en el texto `Roll 01 · XX frames`
-2. Ingresa tu `NEXT_PUBLIC_ADMIN_KEY`
-3. Se activa el modo admin con:
-   - Botón **Subir fotos** con modal de metadatos
-   - Icono ✏ por foto para editar título, descripción, fecha, cámara y datos del rollo
-   - Botón ✕ para eliminar
+1. On any gallery page, **click 5 times** on the `Roll 01 · XX frames` counter
+2. Enter your `NEXT_PUBLIC_ADMIN_KEY`
+3. Admin mode activates with:
+   - **Upload photos** button with a full metadata modal
+   - **✏ Edit** icon per photo — title, description, date, camera, film data
+   - **✕ Delete** button per photo
 
-### Metadatos por foto
+### Photo metadata
 
-**35mm** — cámara, marca del rollo, ISO, Color / B&W, fecha de captura, descripción  
-**Digital** — cámara, fecha de captura, descripción
+**35mm** — camera, film roll brand, ISO, Color / B&W, capture date, optional description  
+**Digital** — camera, capture date, optional description
+
+Both types support an optional title and description.
 
 ---
 
-## Estructura
+## Internationalization
+
+A language toggle (ES / EN) is available in the top-right corner of the navbar. The preference is saved to `localStorage` and persists across sessions.
+
+---
+
+## Project structure
 
 ```
 app/
-  page.tsx              # Galería — todas las fotos
-  35mm/page.tsx         # Galería 35mm
-  digital/page.tsx      # Galería digital
-  about/page.tsx        # About
-  contact/page.tsx      # Contacto
-  api/contact/route.ts  # API para mensajes de contacto
-  globals.css           # Tailwind v4 + grain overlay + estilos base
+  page.tsx              # Gallery — all photos
+  35mm/page.tsx         # Film gallery
+  digital/page.tsx      # Digital gallery
+  about/page.tsx        # About page
+  contact/page.tsx      # Contact form
+  api/contact/route.ts  # Contact API endpoint
+  globals.css           # Tailwind v4 entry + grain overlay + base styles
 components/
-  GalleryView.tsx       # Componente principal de galería (compartido)
-  Navbar.tsx            # Navegación
+  GalleryView.tsx       # Shared gallery component (used by all three gallery pages)
+  Navbar.tsx            # Navigation + language toggle
+  Providers.tsx         # Client-side context wrapper
 lib/
-  supabase.ts           # Cliente Supabase + tipo Photo
-supabase-setup.sql      # Tablas, RLS y migraciones
+  supabase.ts           # Supabase client + Photo type
+  i18n.ts               # EN / ES translations
+  LanguageContext.tsx   # Language context + useLang hook
+supabase-setup.sql      # Tables, RLS policies, and migrations
 ```
 
 ---
 
-## Personalización
+## Customization
 
-- **Nombre / bio** → `app/about/page.tsx`
-- **Categorías** → array `CATEGORIES` en `components/GalleryView.tsx`
-- **Paleta de colores** → `@theme` en `app/globals.css`
-- **Redes sociales** → links en `app/about/page.tsx` y `app/contact/page.tsx`
+- **Name / bio** → `app/about/page.tsx`
+- **Categories** → `CATEGORY_KEYS` array in `components/GalleryView.tsx`
+- **Color palette** → `@theme` block in `app/globals.css`
+- **Social links** → `app/about/page.tsx` and `app/contact/page.tsx`
+- **Translations** → `lib/i18n.ts`

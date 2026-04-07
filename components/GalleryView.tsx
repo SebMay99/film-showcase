@@ -1,19 +1,21 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getSupabase, type Photo } from "@/lib/supabase";
+import { useLang } from "@/lib/LanguageContext";
 import Image from "next/image";
 import { X, Upload, Loader2, Pencil } from "lucide-react";
 
-const CATEGORIES = ["todos", "viaje", "retrato", "urbano", "naturaleza", "otro"];
+const CATEGORY_KEYS = ["todos", "viaje", "retrato", "urbano", "naturaleza", "otro"] as const;
+type CategoryKey = typeof CATEGORY_KEYS[number];
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const displayDate = (photo: Photo) =>
-  new Date(photo.shot_at ?? photo.created_at).toLocaleDateString("es-MX", {
+const getDisplayDate = (photo: Photo) =>
+  new Date(photo.shot_at ?? photo.created_at).toLocaleDateString(undefined, {
     year: "numeric", month: "short", day: "numeric",
   });
 
-const photoMeta = (photo: Photo) =>
+const getPhotoMeta = (photo: Photo) =>
   [
     photo.camera,
     photo.medium === "35mm" && photo.film_roll,
@@ -35,9 +37,11 @@ type EditForm = {
 };
 
 export default function GalleryView({ medium }: Props) {
+  const { t } = useLang();
+
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("todos");
+  const [filter, setFilter] = useState<CategoryKey>("todos");
   const [lightbox, setLightbox] = useState<Photo | null>(null);
   const [adminMode, setAdminMode] = useState(false);
   const [adminKey, setAdminKey] = useState("");
@@ -98,7 +102,7 @@ export default function GalleryView({ medium }: Props) {
   const checkAdminKey = () => {
     if (adminKey === process.env.NEXT_PUBLIC_ADMIN_KEY) {
       setAdminMode(true); setShowAdminPrompt(false); setAdminKey("");
-    } else { alert("Clave incorrecta"); }
+    } else { alert(t.gallery.adminKey + " incorrecta"); }
   };
 
   const openEditModal = (photo: Photo) => {
@@ -165,7 +169,7 @@ export default function GalleryView({ medium }: Props) {
   };
 
   const handleDelete = async (photo: Photo) => {
-    if (!adminMode || !confirm("¿Eliminar esta foto?")) return;
+    if (!adminMode || !confirm(t.gallery.deleteConfirm)) return;
     await getSupabase().storage.from("portfolio").remove([photo.storage_path]);
     await getSupabase().from("photos").delete().eq("id", photo.id);
     setPhotos(prev => prev.filter(p => p.id !== photo.id));
@@ -173,20 +177,21 @@ export default function GalleryView({ medium }: Props) {
 
   const filtered = filter === "todos" ? photos : photos.filter(p => p.category === filter);
 
-  const field = (label: string, value: string, onChange: (v: string) => void, opts?: { placeholder?: string; type?: string }) => (
+  // --- Reusable modal field components ---
+  const Field = ({ label, value, onChange, placeholder, type = "text" }: {
+    label: string; value: string; onChange: (v: string) => void;
+    placeholder?: string; type?: string;
+  }) => (
     <div>
       <label className="font-mono text-[10px] tracking-[0.1em] text-film-brown/70 uppercase block mb-1">{label}</label>
-      <input
-        type={opts?.type ?? "text"}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={opts?.placeholder}
-        className="w-full bg-transparent border border-film-brown/40 px-3 py-1.5 font-mono text-sm text-film-dark rounded-sm"
-      />
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        className="w-full bg-transparent border border-film-brown/40 px-3 py-1.5 font-mono text-sm text-film-dark rounded-sm" />
     </div>
   );
 
-  const toggle = (label: string, options: readonly [string, string][], value: string, onChange: (v: string) => void) => (
+  const Toggle = ({ label, options, value, onChange }: {
+    label: string; options: [string, string][]; value: string; onChange: (v: string) => void;
+  }) => (
     <div>
       <p className="font-mono text-[10px] tracking-[0.1em] text-film-brown/70 uppercase mb-2">{label}</p>
       <div className="flex gap-2">
@@ -200,7 +205,19 @@ export default function GalleryView({ medium }: Props) {
     </div>
   );
 
-  const modalBtns = (onConfirm: () => void, onCancel: () => void, confirmLabel = "Guardar") => (
+  const TextArea = ({ label, value, onChange, placeholder }: {
+    label: string; value: string; onChange: (v: string) => void; placeholder?: string;
+  }) => (
+    <div>
+      <label className="font-mono text-[10px] tracking-[0.1em] text-film-brown/70 uppercase block mb-1">{label}</label>
+      <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={2}
+        className="w-full bg-transparent border border-film-brown/40 px-3 py-1.5 font-mono text-sm text-film-dark rounded-sm resize-none" />
+    </div>
+  );
+
+  const ModalBtns = ({ onConfirm, onCancel, confirmLabel }: {
+    onConfirm: () => void; onCancel: () => void; confirmLabel: string;
+  }) => (
     <div className="flex gap-2 pt-1">
       <button onClick={onConfirm}
         className="flex-1 bg-film-dark text-film-cream font-mono text-[11px] tracking-[0.1em] uppercase py-2 rounded-sm hover:bg-film-brown transition-colors">
@@ -208,7 +225,7 @@ export default function GalleryView({ medium }: Props) {
       </button>
       <button onClick={onCancel}
         className="flex-1 border border-film-brown/40 text-film-dark font-mono text-[11px] tracking-[0.1em] uppercase py-2 rounded-sm hover:border-film-brown transition-colors">
-        Cancelar
+        {t.gallery.cancel}
       </button>
     </div>
   );
@@ -221,11 +238,11 @@ export default function GalleryView({ medium }: Props) {
         <div className="flex items-center gap-3">
           <button onClick={handleTitleClick}
             className="font-mono text-[10px] tracking-[0.15em] text-film-brown uppercase select-none cursor-default">
-            Roll 01 · {String(photos.length).padStart(2, "0")} frames
+            Roll 01 · {String(photos.length).padStart(2, "0")} {t.gallery.frames}
           </button>
           {adminMode && (
             <span className="font-mono text-[10px] tracking-[0.1em] text-film-orange border border-film-orange/40 px-2 py-0.5 rounded-sm">
-              ADMIN
+              {t.gallery.admin}
             </span>
           )}
         </div>
@@ -233,7 +250,7 @@ export default function GalleryView({ medium }: Props) {
           <button onClick={() => setShowUploadModal(true)} disabled={uploading}
             className="flex items-center gap-2 font-mono text-[11px] tracking-[0.1em] uppercase bg-film-dark text-film-cream px-4 py-2 rounded-sm hover:bg-film-brown transition-colors disabled:opacity-50">
             {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            {uploading ? "Subiendo..." : "Subir fotos"}
+            {uploading ? t.gallery.uploading : t.gallery.upload}
           </button>
         )}
         <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
@@ -244,18 +261,18 @@ export default function GalleryView({ medium }: Props) {
       {showAdminPrompt && (
         <div className="fixed inset-0 bg-film-dark/80 z-50 flex items-center justify-center p-4">
           <div className="bg-film-cream border border-film-brown/30 p-6 rounded-sm w-full max-w-sm">
-            <p className="font-mono text-[11px] tracking-[0.12em] text-film-brown uppercase mb-4">Clave de administrador</p>
+            <p className="font-mono text-[11px] tracking-[0.12em] text-film-brown uppercase mb-4">{t.gallery.adminKey}</p>
             <input type="password" value={adminKey} onChange={e => setAdminKey(e.target.value)}
               onKeyDown={e => e.key === "Enter" && checkAdminKey()} placeholder="••••••••"
               className="w-full bg-transparent border border-film-brown/40 px-3 py-2 font-mono text-sm text-film-dark mb-3 rounded-sm" />
             <div className="flex gap-2">
               <button onClick={checkAdminKey}
                 className="flex-1 bg-film-dark text-film-cream font-mono text-[11px] tracking-[0.1em] uppercase py-2 rounded-sm hover:bg-film-brown transition-colors">
-                Entrar
+                {t.gallery.enter}
               </button>
               <button onClick={() => setShowAdminPrompt(false)}
                 className="flex-1 border border-film-brown/40 text-film-dark font-mono text-[11px] tracking-[0.1em] uppercase py-2 rounded-sm hover:border-film-brown transition-colors">
-                Cancelar
+                {t.gallery.cancel}
               </button>
             </div>
           </div>
@@ -266,42 +283,42 @@ export default function GalleryView({ medium }: Props) {
       {showUploadModal && (
         <div className="fixed inset-0 bg-film-dark/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-film-cream border border-film-brown/30 p-6 rounded-sm w-full max-w-sm space-y-4 my-auto">
-            <p className="font-mono text-[11px] tracking-[0.12em] text-film-brown uppercase">Nueva foto</p>
+            <p className="font-mono text-[11px] tracking-[0.12em] text-film-brown uppercase">{t.gallery.newPhoto}</p>
 
             {!medium
-              ? toggle("Tipo de cámara", [["35mm", "35mm"], ["digital", "Digital"]], uploadMedium, v => setUploadMedium(v as "35mm" | "digital"))
-              : <p className="font-mono text-[10px] tracking-[0.1em] text-film-brown/60 uppercase">Subiendo como: <span className="text-film-orange">{medium}</span></p>
+              ? <Toggle label={t.gallery.cameraType}
+                  options={[["35mm", "35mm"], ["digital", "Digital"]]}
+                  value={uploadMedium}
+                  onChange={v => setUploadMedium(v as "35mm" | "digital")} />
+              : <p className="font-mono text-[10px] tracking-[0.1em] text-film-brown/60 uppercase">
+                  {t.gallery.uploadingAs}: <span className="text-film-orange">{medium}</span>
+                </p>
             }
 
-            {field("Título", uploadTitle, setUploadTitle, { placeholder: "Opcional" })}
-
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.1em] text-film-brown/70 uppercase block mb-1">Descripción</label>
-              <textarea value={uploadDescription} onChange={e => setUploadDescription(e.target.value)}
-                placeholder="Opcional"
-                rows={2}
-                className="w-full bg-transparent border border-film-brown/40 px-3 py-1.5 font-mono text-sm text-film-dark rounded-sm resize-none" />
-            </div>
-
-            {field("Fecha", uploadDate, setUploadDate, { type: "date" })}
-            {field("Cámara", uploadCamera, setUploadCamera, { placeholder: "ej. Canon AE-1" })}
+            <Field label={t.gallery.title} value={uploadTitle} onChange={setUploadTitle} placeholder={t.gallery.optional} />
+            <TextArea label={t.gallery.description} value={uploadDescription} onChange={setUploadDescription} placeholder={t.gallery.optional} />
+            <Field label={t.gallery.date} value={uploadDate} onChange={setUploadDate} type="date" />
+            <Field label={t.gallery.camera} value={uploadCamera} onChange={setUploadCamera} placeholder="Canon AE-1" />
 
             {effectiveMedium === "35mm" && (
               <>
-                {field("Marca del rollo", uploadFilmRoll, setUploadFilmRoll, { placeholder: "ej. Kodak Gold 200" })}
-                {field("ISO", uploadFilmIso, setUploadFilmIso, { placeholder: "ej. 400" })}
-                {toggle("Tipo de rollo", [["color", "Color"], ["bw", "B&W"]], uploadFilmType, v => setUploadFilmType(v as "color" | "bw"))}
+                <Field label={t.gallery.filmRoll} value={uploadFilmRoll} onChange={setUploadFilmRoll} placeholder="Kodak Gold 200" />
+                <Field label={t.gallery.iso} value={uploadFilmIso} onChange={setUploadFilmIso} placeholder="400" />
+                <Toggle label={t.gallery.filmType}
+                  options={[["color", t.gallery.color], ["bw", t.gallery.bw]]}
+                  value={uploadFilmType}
+                  onChange={v => setUploadFilmType(v as "color" | "bw")} />
               </>
             )}
 
             <div className="flex gap-2 pt-1">
               <button onClick={() => fileRef.current?.click()}
                 className="flex-1 flex items-center justify-center gap-2 bg-film-dark text-film-cream font-mono text-[11px] tracking-[0.1em] uppercase py-2 rounded-sm hover:bg-film-brown transition-colors">
-                <Upload size={12} /> Seleccionar fotos
+                <Upload size={12} /> {t.gallery.selectPhotos}
               </button>
               <button onClick={() => setShowUploadModal(false)}
                 className="flex-1 border border-film-brown/40 text-film-dark font-mono text-[11px] tracking-[0.1em] uppercase py-2 rounded-sm hover:border-film-brown transition-colors">
-                Cancelar
+                {t.gallery.cancel}
               </button>
             </div>
           </div>
@@ -312,51 +329,48 @@ export default function GalleryView({ medium }: Props) {
       {editingPhoto && (
         <div className="fixed inset-0 bg-film-dark/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-film-cream border border-film-brown/30 p-6 rounded-sm w-full max-w-sm space-y-4 my-auto">
-            <p className="font-mono text-[11px] tracking-[0.12em] text-film-brown uppercase">Editar foto</p>
+            <p className="font-mono text-[11px] tracking-[0.12em] text-film-brown uppercase">{t.gallery.editPhoto}</p>
 
-            {field("Título", editForm.title, v => setEditForm(f => ({ ...f, title: v })), { placeholder: "Opcional" })}
-
-            <div>
-              <label className="font-mono text-[10px] tracking-[0.1em] text-film-brown/70 uppercase block mb-1">Descripción</label>
-              <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Opcional"
-                rows={2}
-                className="w-full bg-transparent border border-film-brown/40 px-3 py-1.5 font-mono text-sm text-film-dark rounded-sm resize-none" />
-            </div>
-
-            {field("Fecha", editForm.shot_at, v => setEditForm(f => ({ ...f, shot_at: v })), { type: "date" })}
+            <Field label={t.gallery.title} value={editForm.title} onChange={v => setEditForm(f => ({ ...f, title: v }))} placeholder={t.gallery.optional} />
+            <TextArea label={t.gallery.description} value={editForm.description} onChange={v => setEditForm(f => ({ ...f, description: v }))} placeholder={t.gallery.optional} />
+            <Field label={t.gallery.date} value={editForm.shot_at} onChange={v => setEditForm(f => ({ ...f, shot_at: v }))} type="date" />
 
             <div>
-              <label className="font-mono text-[10px] tracking-[0.1em] text-film-brown/70 uppercase block mb-1">Categoría</label>
+              <label className="font-mono text-[10px] tracking-[0.1em] text-film-brown/70 uppercase block mb-1">{t.gallery.category}</label>
               <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
                 className="w-full bg-transparent border border-film-brown/40 px-3 py-1.5 font-mono text-sm text-film-dark rounded-sm">
-                {CATEGORIES.filter(c => c !== "todos").map(c => <option key={c} value={c}>{c}</option>)}
+                {CATEGORY_KEYS.filter(c => c !== "todos").map(c => (
+                  <option key={c} value={c}>{t.categories[c]}</option>
+                ))}
               </select>
             </div>
 
-            {field("Cámara", editForm.camera, v => setEditForm(f => ({ ...f, camera: v })), { placeholder: "ej. Canon AE-1" })}
+            <Field label={t.gallery.camera} value={editForm.camera} onChange={v => setEditForm(f => ({ ...f, camera: v }))} placeholder="Canon AE-1" />
 
             {editingPhoto.medium === "35mm" && (
               <>
-                {field("Marca del rollo", editForm.film_roll, v => setEditForm(f => ({ ...f, film_roll: v })), { placeholder: "ej. Kodak Gold 200" })}
-                {field("ISO", editForm.film_iso, v => setEditForm(f => ({ ...f, film_iso: v })), { placeholder: "ej. 400" })}
-                {toggle("Tipo de rollo", [["color", "Color"], ["bw", "B&W"]], editForm.film_type, v => setEditForm(f => ({ ...f, film_type: v as "color" | "bw" })))}
+                <Field label={t.gallery.filmRoll} value={editForm.film_roll} onChange={v => setEditForm(f => ({ ...f, film_roll: v }))} placeholder="Kodak Gold 200" />
+                <Field label={t.gallery.iso} value={editForm.film_iso} onChange={v => setEditForm(f => ({ ...f, film_iso: v }))} placeholder="400" />
+                <Toggle label={t.gallery.filmType}
+                  options={[["color", t.gallery.color], ["bw", t.gallery.bw]]}
+                  value={editForm.film_type}
+                  onChange={v => setEditForm(f => ({ ...f, film_type: v as "color" | "bw" }))} />
               </>
             )}
 
-            {modalBtns(savePhotoEdit, () => setEditingPhoto(null))}
+            <ModalBtns onConfirm={savePhotoEdit} onCancel={() => setEditingPhoto(null)} confirmLabel={t.gallery.save} />
           </div>
         </div>
       )}
 
       {/* Category filter */}
       <div className="flex items-center gap-0 border-b border-film-brown/20 mb-8 overflow-x-auto">
-        {CATEGORIES.map((cat, i) => (
+        {CATEGORY_KEYS.map((cat, i) => (
           <button key={cat} onClick={() => setFilter(cat)}
             className={`font-mono text-[11px] tracking-[0.12em] uppercase px-4 py-2 transition-colors whitespace-nowrap
-              ${i < CATEGORIES.length - 1 ? "border-r border-film-brown/20" : ""}
+              ${i < CATEGORY_KEYS.length - 1 ? "border-r border-film-brown/20" : ""}
               ${filter === cat ? "text-film-dark underline underline-offset-4 decoration-film-brown" : "text-film-brown hover:text-film-orange"}`}>
-            {cat}
+            {t.categories[cat]}
           </button>
         ))}
       </div>
@@ -373,7 +387,7 @@ export default function GalleryView({ medium }: Props) {
             {[...Array(5)].map((_, i) => <div key={i} className="w-12 h-9 border border-film-brown rounded-sm bg-film-brown/10" />)}
           </div>
           <p className="font-mono text-[12px] tracking-[0.1em] text-film-brown uppercase leading-relaxed">
-            {photos.length === 0 ? "El carrete está en blanco" : "Sin fotos en esta categoría"}
+            {photos.length === 0 ? t.gallery.blankRoll : t.gallery.noPhotos}
           </p>
         </div>
       )}
@@ -381,7 +395,7 @@ export default function GalleryView({ medium }: Props) {
       {!loading && filtered.length > 0 && (
         <div className="columns-2 md:columns-3 gap-3">
           {filtered.map(photo => {
-            const meta = photoMeta(photo);
+            const meta = getPhotoMeta(photo);
             return (
               <div key={photo.id} className="break-inside-avoid mb-3">
                 <div className="bg-white border border-film-brown/25 p-1.5 pb-7 cursor-pointer relative"
@@ -390,25 +404,19 @@ export default function GalleryView({ medium }: Props) {
                     width={600} height={400} className="w-full h-auto block film-photo" />
                   <div className="absolute bottom-1.5 left-1.5 right-1.5 flex justify-between">
                     <span className="font-mono text-[9px] text-film-brown/70 tracking-[0.1em]">{photo.frame_num}</span>
-                    <span className="font-mono text-[9px] text-film-orange tracking-[0.08em] uppercase">{photo.category}</span>
+                    <span className="font-mono text-[9px] text-film-orange tracking-[0.08em] uppercase">{t.categories[photo.category as CategoryKey] ?? photo.category}</span>
                   </div>
                 </div>
                 <div className="mt-1.5 px-0.5">
-                  {photo.title && (
-                    <p className="font-serif text-sm italic text-film-dark truncate">{photo.title}</p>
-                  )}
-                  {photo.description && (
-                    <p className="font-mono text-[10px] text-film-dark/60 leading-relaxed mt-0.5">{photo.description}</p>
-                  )}
-                  {meta && (
-                    <p className="font-mono text-[9px] text-film-brown/50 tracking-[0.06em] mt-0.5">{meta}</p>
-                  )}
+                  {photo.title && <p className="font-serif text-sm italic text-film-dark truncate">{photo.title}</p>}
+                  {photo.description && <p className="font-mono text-[10px] text-film-dark/60 leading-relaxed mt-0.5">{photo.description}</p>}
+                  {meta && <p className="font-mono text-[9px] text-film-brown/50 tracking-[0.06em] mt-0.5">{meta}</p>}
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-mono text-[10px] text-film-brown/60">{displayDate(photo)}</span>
+                    <span className="font-mono text-[10px] text-film-brown/60">{getDisplayDate(photo)}</span>
                     {adminMode && (
                       <div className="flex items-center gap-1.5 ml-auto">
                         <button onClick={() => openEditModal(photo)}
-                          className="font-mono text-[9px] text-film-brown/50 hover:text-film-orange transition-colors flex items-center gap-0.5">
+                          className="text-film-brown/50 hover:text-film-orange transition-colors">
                           <Pencil size={9} />
                         </button>
                         <button onClick={() => handleDelete(photo)}
@@ -427,32 +435,27 @@ export default function GalleryView({ medium }: Props) {
 
       {/* Lightbox */}
       {lightbox && (() => {
-        const meta = photoMeta(lightbox);
+        const meta = getPhotoMeta(lightbox);
         return (
           <div className="fixed inset-0 bg-film-dark/92 z-50 flex items-center justify-center p-4 md:p-8"
             onClick={() => setLightbox(null)}>
             <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
               <button onClick={() => setLightbox(null)}
                 className="absolute -top-9 right-0 font-mono text-[11px] tracking-[0.15em] text-film-tan/70 hover:text-film-cream uppercase flex items-center gap-1">
-                <X size={12} /> cerrar
+                <X size={12} /> {t.gallery.close}
               </button>
               <div className="bg-white p-2 pb-12 relative">
                 <Image src={lightbox.public_url} alt={lightbox.title ?? lightbox.frame_num}
                   width={1200} height={800} className="w-full h-auto block film-photo" />
                 <div className="absolute bottom-2 left-2 right-2 flex justify-between items-end gap-4">
                   <div className="min-w-0">
-                    {lightbox.title && (
-                      <p className="font-serif text-sm italic text-film-dark">{lightbox.title}</p>
-                    )}
-                    {lightbox.description && (
-                      <p className="font-mono text-[10px] text-film-dark/60 leading-relaxed mt-0.5">{lightbox.description}</p>
-                    )}
+                    {lightbox.title && <p className="font-serif text-sm italic text-film-dark">{lightbox.title}</p>}
+                    {lightbox.description && <p className="font-mono text-[10px] text-film-dark/60 leading-relaxed mt-0.5">{lightbox.description}</p>}
                   </div>
                   <p className="font-mono text-[10px] text-film-brown tracking-[0.08em] text-right shrink-0">
-                    {lightbox.frame_num} — {lightbox.category.toUpperCase()}
+                    {lightbox.frame_num} — {(t.categories[lightbox.category as CategoryKey] ?? lightbox.category).toUpperCase()}
                     {meta && <><br />{meta}</>}
-                    <br />
-                    {displayDate(lightbox)}
+                    <br />{getDisplayDate(lightbox)}
                   </p>
                 </div>
               </div>
