@@ -49,3 +49,12 @@ create policy "contact_insert"
 
 -- Storage bucket setup (run in Supabase dashboard Storage section)
 -- Create a bucket named "portfolio" and set it to PUBLIC
+
+-- Migration: add medium, camera, and film metadata columns
+-- Run this if the photos table already exists
+alter table photos
+  add column if not exists medium text not null default '35mm',
+  add column if not exists camera text,
+  add column if not exists film_roll text,
+  add column if not exists film_iso text,
+  add column if not exists film_type text;

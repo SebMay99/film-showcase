@@ -29,4 +29,9 @@ export type Photo = {
   public_url: string;
   created_at: string;
   frame_num: string;
+  medium: "35mm" | "digital";
+  camera: string | null;
+  film_roll: string | null;
+  film_iso: string | null;
+  film_type: "color" | "bw" | null;
 };
