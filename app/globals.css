@@ -1,11 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=DM+Mono:wght@300;400;500&display=swap');
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --font-playfair: 'Playfair Display', Georgia, serif;
-  --font-dm-mono: 'DM Mono', monospace;
+@theme {
+  --color-film-cream: #f2ede4;
+  --color-film-dark: #1a1510;
+  --color-film-brown: #8c6e4b;
+  --color-film-orange: #c97c3a;
+  --color-film-tan: #d4b896;
+  --color-film-light: #e8e0d0;
+  --color-film-faded: #b8a898;
+
+  --font-serif: var(--font-playfair), Georgia, serif;
+  --font-mono: var(--font-dm-mono), monospace;
 }
 
 * { box-sizing: border-box; }
